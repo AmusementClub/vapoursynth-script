@@ -414,7 +414,6 @@ def ToRGB(clip: vs.VideoNode, kernel: str = "bicubic", a1: float = 0, a2: float 
         raise vs.Error(f'{funcName}: Only support YUV input.')
     
     matrixI, matrixS = GetMatrix(clip, matrix)
-    print(matrixS)
 
     if useZ:
         # dFormat = query_video_format(vs.RGB, vs.FLOAT, 32, 0, 0)
