@@ -30,6 +30,8 @@ class RgTools():
             self.planes = list(range(clip.format.num_planes))
         elif isinstance(planes, int):
             self.planes = [planes]
+        else:
+            self.planes = planes
 
     def _matrix(self, c: str, r: int = 1, m: str = 'pix', mid: bool = False, mlim: bool = False) -> str:
         rc = [i for i in range(-1 * r, r + 1)]
