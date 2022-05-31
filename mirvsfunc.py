@@ -403,7 +403,7 @@ def BM3D(clip: vs.VideoNode, ref: Optional[vs.VideoNode] = None, sigma: Union[in
     return flt
 
 
-def ToRGB(clip: vs.VideoNode, kernel: str = "bicubic", a1: float = 0, a2: float = 0.5, useZ: bool = False) -> vs.VideoNode:
+def ToRGB(clip: vs.VideoNode, kernel: str = "bicubic", a1: float = 0, a2: float = 0.5, useZ: bool = False, matrix: Union[str, int] = None) -> vs.VideoNode:
     '''Convert 8-16 bit TVRange SDR YUV420 to 32bit float full-range RGB'''
     funcName = 'ToRGB'
     
@@ -413,7 +413,8 @@ def ToRGB(clip: vs.VideoNode, kernel: str = "bicubic", a1: float = 0, a2: float 
     if sColorFamily != vs.YUV:
         raise vs.Error(f'{funcName}: Only support YUV input.')
     
-    matrixI, matrixS = GetMatrix(clip)
+    matrixI, matrixS = GetMatrix(clip, matrix)
+    print(matrixS)
 
     if useZ:
         # dFormat = query_video_format(vs.RGB, vs.FLOAT, 32, 0, 0)
@@ -425,7 +426,7 @@ def ToRGB(clip: vs.VideoNode, kernel: str = "bicubic", a1: float = 0, a2: float 
     return last
 
 
-def ToYUV(clip: vs.VideoNode, kernel: str = "bicubic", a1: float = 0, a2: float = 0.5, useZ: bool = False) -> vs.VideoNode:
+def ToYUV(clip: vs.VideoNode, kernel: str = "bicubic", a1: float = 0, a2: float = 0.5, useZ: bool = False, matrix: Union[str, int] = None, css: str = "420") -> vs.VideoNode:
     '''Convert 32bit float full-range RGB to 16 bit TVRange SDR YUV420.'''
     funcName = 'ToYUV'
     
@@ -435,13 +436,13 @@ def ToYUV(clip: vs.VideoNode, kernel: str = "bicubic", a1: float = 0, a2: float 
     if sColorFamily != vs.RGB:
         raise vs.Error(f'{funcName}: Only support RGB input.')
 
-    matrixI, matrixS = GetMatrix(clip)
+    matrixI, matrixS = GetMatrix(clip, matrix)
 
     if useZ:
-        last = ZimgResize(clip, kernel=kernel, a = a1, b = a2, format = vs.YUV420P16, matrix = matrixI)
+        last = ZimgResize(clip, kernel=kernel, a = a1, b = a2, format = vs.YUV420P16 if css == "420" else vs.YUV444P16, matrix = matrixI)
     else:
         last = clip.fmtc.bitdepth(bits=16, dmode = 1).fmtc.matrix(fulls = True, fulld = False, mat = matrixS, col_fam=vs.YUV)
-        last = last.fmtc.resample(kernel = kernel, a1 = a1, a2 = a2, css = "420")
+        last = last.fmtc.resample(kernel = kernel, a1 = a1, a2 = a2, css = css)
 
     return last
 
