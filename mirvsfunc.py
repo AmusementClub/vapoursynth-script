@@ -333,10 +333,10 @@ def BM3D(clip: vs.VideoNode, ref: Optional[vs.VideoNode] = None, sigma: Union[in
     '''
     funcName = 'BM3D'
     bm3d_plugin = {
-        "cpu": core.bm3dcpu,
-        "gpu": core.bm3dcuda,
-        "cuda": core.bm3dcuda,
-        "cuda_rtc": core.bm3dcuda_rtc
+        "cpu": core.bm3dcpu if hasattr(core, 'bm3dcpu') else None,
+        "gpu": core.bm3dcuda if hasattr(core, 'bm3dcuda') else None,
+        "cuda": core.bm3dcuda if hasattr(core, 'bm3dcuda') else None,
+        "cuda_rtc": core.bm3dcuda_rtc if hasattr(core, 'bm3dcuda_rtc') else None
     }
 
     sFormat = clip.format
@@ -345,11 +345,13 @@ def BM3D(clip: vs.VideoNode, ref: Optional[vs.VideoNode] = None, sigma: Union[in
     sSType = sFormat.sample_type
     sPlaneN = sFormat.num_planes
 
+    cpu = True if device_type == 'cpu' else False
+
     bm3d_v2 = True if hasattr(bm3d_plugin[device_type], 'BM3Dv2') else False
     bm3d_args = dict(sigma=sigma, block_step=block_step, bm_range=bm_range, radius=radius, ps_num=ps_num, ps_range=ps_range, chroma=chroma)
 
     if device_type in bm3d_plugin.keys():
-        BM3Da = partial(bm3d_plugin[device_type].BM3D, **bm3d_args, device_id=device_id, fast=fast, extractor_exp=extractor_exp) if bm3d_v2 else partial(bm3d_plugin[device_type].BM3D, **bm3d_args)
+        BM3Da = partial(bm3d_plugin[device_type].BM3D, **bm3d_args, device_id=device_id, fast=fast, extractor_exp=extractor_exp) if bm3d_v2 and not cpu else partial(bm3d_plugin[device_type].BM3D, **bm3d_args)
     else:
         raise vs.Error('BM3D: device_type only support cpu, gpu, cuda, cuda_rtc.')
 
