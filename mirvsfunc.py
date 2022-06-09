@@ -351,7 +351,8 @@ def BM3D(clip: vs.VideoNode, ref: Optional[vs.VideoNode] = None, sigma: Union[in
     bm3d_args = dict(sigma=sigma, block_step=block_step, bm_range=bm_range, radius=radius, ps_num=ps_num, ps_range=ps_range, chroma=chroma)
 
     if device_type in bm3d_plugin.keys():
-        BM3Da = partial(bm3d_plugin[device_type].BM3D, **bm3d_args, device_id=device_id, fast=fast, extractor_exp=extractor_exp) if bm3d_v2 and not cpu else partial(bm3d_plugin[device_type].BM3D, **bm3d_args)
+        BM3Dc = bm3d_plugin[device_type].BM3Dv2 if (radius > 0 and bm3d_v2) else bm3d_plugin[device_type].BM3D
+        BM3Da = partial(BM3Dc, **bm3d_args, device_id=device_id, fast=fast, extractor_exp=extractor_exp) if not cpu else partial(BM3Dc, **bm3d_args)
     else:
         raise vs.Error('BM3D: device_type only support cpu, gpu, cuda, cuda_rtc.')
 
