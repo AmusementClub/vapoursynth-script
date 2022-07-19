@@ -8,7 +8,7 @@ from functools import partial
 import vapoursynth as vs
 from vapoursynth import core
 
-__version__ = '0.1.0'
+__version__ = '0.1.1'
 __all__ = [ "RgTools", "GetFrameProp", "SplitPlanes", "RemoveFrameProp", "SetFrameProps", "query_video_format",
             "BM3D", "ToRGB", "ToYUV", "GetMatrix", "ZimgResize",
             "scale_value"
