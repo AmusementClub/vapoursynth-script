@@ -8,7 +8,7 @@ from functools import partial
 import vapoursynth as vs
 from vapoursynth import core
 
-__version__ = '0.1.1'
+__version__ = '0.1.2'
 __all__ = [ "RgTools", "GetFrameProp", "SplitPlanes", "RemoveFrameProp", "SetFrameProps", "query_video_format",
             "BM3D", "ToRGB", "ToYUV", "GetMatrix", "ZimgResize",
             "scale_value"
@@ -33,7 +33,7 @@ class RgTools():
         else:
             self.planes = planes
 
-    def _matrix(self, c: str, r: int = 1, m: str = 'pix', mid: bool = False, mlim: bool = False) -> str:
+    def _matrix(self, c: str, r: int = 1, m: str = 'pix', mid: bool = False, mlim: int = 0) -> str:
         rc = [i for i in range(-1 * r, r + 1)]
         pn = (r * 2 + 1) ** 2
         pn_h = pn // 2
@@ -50,15 +50,22 @@ class RgTools():
                     matrix.append(f'{c}[{x},{y}] p{i+1}! ')
                     i += 1
 
-            if mlim:
+            if mlim == 1:
                 matrix += [f'p{pn_h+1}@ p{i+1}@ - abs p{pn_h+1}@ p{pn-i}@ - abs max d{i+1}! ' for i in range(pn_h)]
                 matrix += [f'd{i+1}@ ' for i in range(pn_h)]
+            elif mlim in [2, 3]:
+                matrix += [f'{"y" if mlim==2 else "x"} p{i+1}@ - abs d{i+1}! ' for i in range(pn) if i != pn_h]
+
 
         elif m == 'line':
             
             matrix = [f'{matrix0[i]} {matrix0[-(i+1)]} {matrix0[pn_h] if c=="y" and mid else ""} sort{3 if c=="y" and mid else 2} mil{i+1}! {"drop" if c=="y" and mid else ""} mal{i+1}! ' for i in range(pn_h)]
-            matrix += [f'mal{i+1}@ mil{i+1}@ - d{i+1}! 'for i in range(pn_h)]
-            matrix += [f'{"y" if mlim else "x"} mil{i+1}@ mal{i+1}@ clip cli{i+1}! 'for i in range(pn_h)]
+            
+            if mlim in [0, 1]:
+                matrix += [f'mal{i+1}@ mil{i+1}@ - d{i+1}! 'for i in range(pn_h)]
+                matrix += [f'{"y" if mlim==1 else "x"} mil{i+1}@ mal{i+1}@ clip cli{i+1}! 'for i in range(pn_h)]
+            elif mlim == [2, 3]:
+                matrix += []
         
         elif m == 'line2':
             matrix = [f'{matrix0[i]}{matrix0[-(i+1)]}sort2 mil{i+1}! mal{i+1}! ' for i in range(pn_h)]
@@ -79,7 +86,7 @@ class RgTools():
         else:
             return [(expr if i in self.planes else '') for i in range(self.clip.format.num_planes)]
 
-    def _expr(self, m: int = 1, c: str = 'x', r: int = 1, mid: bool = False, mlim: bool = False) -> Union[str, Sequence[str]]:
+    def _expr(self, m: int = 1, c: str = 'x', r: int = 1, mid: bool = False, mlim: int = 0) -> Union[str, Sequence[str]]:
 
         if m not in [4, 19, 20] and r != 1:
             raise vs.Error('RgTools.RemoveGrain: radius > 1 now only support mode (int) = 4 / 19 / 20.')
@@ -91,18 +98,22 @@ class RgTools():
         elif m == 5:
             a = f'{self._matrix(c, r, "line", mid=mid, mlim=mlim)}'
 
-            if not mlim:
+            if mlim == 0:
                 expr = f'{a}x cli1@ - abs c1! x cli2@ - abs c2! x cli3@ - abs c3! x cli4@ - abs c4! c1@ c2@ c3@ c4@ sort4 mindiff! drop3 mindiff@ c4@ = cli4@ mindiff@ c2@ = cli2@ mindiff@ c3@ = cli3@ cli1@ ? ? ?'
-            else:
+            elif mlim == 1:
                 expr = f'{a}y cli1@ - abs c1! y cli2@ - abs c2! y cli3@ - abs c3! y cli4@ - abs c4! c1@ c2@ c3@ c4@ sort4 mindiff! drop3 mindiff@ c4@ = x mil4@ y min mal4@ y max clip mindiff@ c2@ = x mil2@ y min mal2@ y max clip mindiff@ c3@ = x mil3@ y min mal3@ y max clip x mil1@ y min mal1@ y max clip ? ? ?'
+            else:
+                expr = ''
 
         elif m == 6:
             a = f'{self._matrix(c, r, "line", mid=mid, mlim=mlim)}'
 
-            if not mlim:
+            if mlim == 0:
                 expr = f'{a}x cli1@ - abs 2 * d1@ + c1! x cli2@ - abs 2 * d2@ + c2! x cli3@ - abs 2 * d3@ + c3! x cli4@ - abs 2 * d4@ + c4! c1@ c2@ c3@ c4@ sort4 mindiff! drop3 mindiff@ c4@ = cli4@ mindiff@ c2@ = cli2@ mindiff@ c3@ = cli3@ cli1@ ? ? ?'
-            else:
+            elif mlim == 1:
                 expr = f'{a}y cli1@ - abs 2 * d1@ + c1! y cli2@ - abs 2 * d2@ + c2! y cli3@ - abs 2 * d3@ + c3! y cli4@ - abs 2 * d4@ + c4! c1@ c2@ c3@ c4@ sort4 mindiff! drop3 mindiff@ c4@ = x mil4@ y min mal4@ y max clip mindiff@ c2@ = x mil2@ y min mal2@ y max clip mindiff@ c3@ = x mil3@ y min mal3@ y max clip x mil1@ y min mal1@ y max clip ? ? ?'
+            else:
+                expr = ''
 
         elif m == 7:
             expr = f'{self._matrix(c, r, "line", mid=mid, mlim=mlim)}x cli1@ - abs d1@ + c1! x cli2@ - abs d2@ + c2! x cli3@ - abs d3@ + c3! x cli4@ - abs d4@ + c4! c1@ c2@ c3@ c4@ sort4 mindiff! drop3 mindiff@ c4@ = cli4@ mindiff@ c2@ = cli2@ mindiff@ c3@ = cli3@ cli1@ ? ? ?'
@@ -132,21 +143,41 @@ class RgTools():
             a = "sort2 swap" if c == "x" else "p5@ sort3 swap drop swap"
             expr = f'{self._matrix(c, r, "pixv", True, True)}sort4 mindiff! drop3 mindiff@ d4@ = x p4@ p6@ {a} clip mindiff@ d2@ = x p2@ p8@ {a} clip mindiff@ d3@ = x p3@ p7@ {a} clip x p1@ p9@ {a} clip ? ? ?'
 
-        elif m in [19, 20]:
+        elif m in [19, 20] and c == "x":
             pn = (r * 2 + 1) ** 2 - 1 if m == 19 else (r * 2 + 1) ** 2
             expr = f'{self._matrix(c, r, "pix", False if m==19 else True)}{"+ " * (pn - 1)}{pn} /'
 
-        elif m == 21:
+        elif m == 21 and c == "x":
             expr = f'{self._matrix(c, r, "pixv")}p1@ p9@ + m1! p2@ p8@ + m2! p3@ p7@ + m3! p4@ p6@ + m4! m1@ 2 / l1l! m2@ 2 / l2l! m3@ 2 / l3l! m4@ 2 / l4l! m1@ 1 + 2 / l1h! m2@ 1 + 2 / l2h! m3@ 1 + 2 / l3h! m4@ 1 + 2 / l4h! l1l@ l2l@ l3l@ l4l@ sort4 mi! drop3 l1h@ l2h@ l3h@ l4h@ sort4 dup3 ma! drop4 x mi@ ma@ clip'
 
-        elif m == 22:
+        elif m == 22 and c == "x":
             expr = f'{self._matrix(c, r, "pixv")}p1@ p9@ + 2 / s1! p4@ p6@ + 2 / s2! p7@ p3@ + 2 / s3! p8@ p2@ + 2 / s4! s1@ s2@ s3@ s4@ sort4 mi! drop3 s1@ s2@ s3@ s4@ sort4 dup3 ma! drop4 x mi@ ma@ clip'
 
-        elif m == 23:
+        elif m == 23 and c == "x":
             expr = f'{self._matrix(c, r, "line")}x mal1@ - d1@ min x mal2@ - d2@ min x mal3@ - d3@ min x mal4@ - d4@ min sort4 dup3 0 max u! drop4 mil1@ x - d1@ min mil2@ x - d2@ min mil3@ x - d3@ min mil4@ x - d4@ min sort4 dup3 0 max d! drop4 x u@ - d@ +'
 
-        elif m == 24:
+        elif m == 24 and c == "x":
             expr = f'{self._matrix(c, r, "line")}x mal1@ - tu1! x mal2@ - tu2! x mal3@ - tu3! x mal4@ - tu4! tu1@ d1@ tu1@ - min tu2@ d2@ tu2@ - min tu3@ d3@ tu3@ - min tu4@ d4@ tu4@ - min sort4 dup3 0 max u! drop4 mil1@ x - td1! mil2@ x - td2! mil3@ x - td3! mil4@ x - td4! td1@ d1@ td1@ - min td2@ d2@ td2@ - min td3@ d3@ td3@ - min td4@ d4@ td4@ - min sort4 dup3 0 max d! drop4 x u@ - d@ +'
+
+        elif m in [19, 22] and c == "y":
+            expr = f'{self._matrix(c, r, "pixv", mid, mlim)}d1@ d2@ d3@ d4@ d6@ d7@ d8@ d9@ sort8 dup mindiff! drop8 {"x" if m==19 else "y"} {"y" if m==19 else "x"} mindiff@ - 0 0xFFFF clip {"y" if m==19 else "x"} mindiff@ + 0 0xFFFF clip clip'
+        
+        elif m in [20, 23] and c == "y":
+            expr = f'{self._matrix(c, r, "pixv", mid, mlim)}d1@ d2@ sort2 mindiff! maxdiff! '
+            for i in range(3, 9):
+                if i != 5:
+                    expr += f'maxdiff@ mindiff@ d{i}@ clip maxdiff! mindiff@ d{i}@ min mindiff! '
+            expr += f'maxdiff@ mindiff@ d9@ clip maxdiff! {"x" if m==20 else "y"} {"y" if m==20 else "x"} maxdiff@ - 0 0xFFFF clip {"y" if m==20 else "x"} maxdiff@ + 0 0xFFFF clip clip'
+
+        elif m in [21, 24] and c == "y":
+            expr = f'{self._matrix(c, r, "line", mid, mlim)}'
+            for i in range(1, 5):
+                expr += f'mal{i}@ {"y" if m==21 else "x"} - 0 0xFFFF clip d{i}! '
+            for i in range(1, 5):
+                expr += f'{"y" if m==21 else "x"} mil{i}@ - 0 0xFFFF clip rd{i}! '
+            for i in range(1, 5):
+                expr += f'd{i}@ rd{i}@ max '
+            expr += f'sort4 dup u! drop4 {"x" if m==21 else "y"} {"y" if m==21 else "x"} u@ - 0 0xFFFF clip {"y" if m==21 else "x"} u@ + 0 0xFFFF clip clip'
 
         else:
             expr = ''
@@ -157,7 +188,7 @@ class RgTools():
         '''
         mode:
             0: None;
-            int (1-24): same as Rgtools/rgvs.RemoveGrain;
+            int (1-24): same as Rgtools / rgvs.RemoveGrain;
             float (1.0, 1.58, 2.25, 2.75, 4.0): same as Avisynth blur();
             string (Median):
                 Median: same as std.Median, ctmf.CTMF;
@@ -204,22 +235,26 @@ class RgTools():
     def Repair(self, repclip: vs.VideoNode, mode: int) -> vs.VideoNode:
         '''
         mode:
-            same as Rgtools/rgvs.RemoveGrain, now only support 1-18
+            same as Rgtools / rgvs.Repair, now only support 1-24
         '''
+        mid = False
+
         if mode in range(1, 11):
-            last = core.akarin.Expr([self.clip, repclip], self._expr(mode, 'y', mid=True))
-
+            mid = True
+            mlim = 0
         elif mode in range(11, 17):
-
-            last = core.akarin.Expr([self.clip, repclip], self._expr(mode - 10, 'y', mid=False, mlim=True))
-
+            mode = mode - 10
+            mlim = 1
         elif mode in [17, 18]:
-            last = core.akarin.Expr([self.clip, repclip], self._expr(mode, 'y', mid=False))
-        
+            mlim = 0
+        elif mode in range(19, 22):
+            mlim = 2
+        elif mode in range(22, 25):
+            mlim = 3
         else:
-            raise vs.Error('RgTools.Repair() mode now only support 1-18.')
+            raise vs.Error('RgTools.Repair() mode now only support 1-24.')
 
-        return last
+        return core.akarin.Expr([self.clip, repclip], self._expr(mode, 'y', mid=mid, mlim=mlim))
 
     # def TemporalRepair(self)
 
@@ -236,7 +271,7 @@ class RgTools():
         '''
         VerticalCleaner is a fast vertical median filter.
         mode:
-            same as Rgtools/rgvs.RemoveGrain, support 0-2
+            same as Rgtools / rgvs.VerticalCleaner, support 0-2
         '''
         if mode == 0:
             last = self.clip
@@ -247,7 +282,7 @@ class RgTools():
             # Thanks Dogway
             last = core.akarin.Expr(self.clip, self._planes('x[0,-2] b2! x[0,-1] b1! x[0,1] t1! x[0,2] t2! b1@ b2@ - b1@ + t1@ t2@ - t1@ + min b1@ max t1@ max b1@ b2@ b1@ - - t1@ t2@ t1@ - - max b1@ t1@ min min x swap2 clip'))
         else:
-            raise vs.Error('RgTools.VerticalCleaner() mode only have 0-3.')
+            raise vs.Error('RgTools.VerticalCleaner() mode only have 0-2.')
 
         return last
 

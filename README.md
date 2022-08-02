@@ -15,5 +15,7 @@
 `RgTools(clip, planes=[0,1,2]).RemoveGrain(mode, radius=1)` = `rgvs.RemoveGrain(clip, mode)`
 
 `RgTools(clip, planes=[0,1,2]).Repair(repclip, mode)` = `rgvs.Repair(clip, repclip, mode)`
+
 ## RpcTemplate
+
 Use [vs-ComparePlane](https://github.com/AmusementClub/vs-ComparePlane) to accelerate rpc processing.
