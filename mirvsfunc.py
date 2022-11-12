@@ -8,7 +8,7 @@ from functools import partial
 import vapoursynth as vs
 from vapoursynth import core
 
-__version__ = '0.1.2'
+__version__ = '0.1.3'
 __all__ = [ "RgTools", "GetFrameProp", "SplitPlanes", "RemoveFrameProp", "SetFrameProps", "query_video_format",
             "BM3D", "ToRGB", "ToYUV", "GetMatrix", "ZimgResize",
             "scale_value"
@@ -17,6 +17,7 @@ __all__ = [ "RgTools", "GetFrameProp", "SplitPlanes", "RemoveFrameProp", "SetFra
 VSApiVer4 = vs.__api_version__.api_major >= 4
 PlanesType = Optional[Union[int, Sequence[int]]]
 propType = Any
+Format = vs.VideoFormat if VSApiVer4 else vs.Format
 
 
 ######
@@ -350,7 +351,7 @@ def SetFrameProps(input: vs.VideoNode, props: Union[propType, Sequence[propType]
     return res.text.FrameProps() if show else res
 
 
-def query_video_format(color_family: vs.ColorFamily, sample_type: vs.SampleType, bits_per_sample: int, subsampling_w: int = 0, subsampling_h: int = 0) -> vs.VideoFormat:
+def query_video_format(color_family: vs.ColorFamily, sample_type: vs.SampleType, bits_per_sample: int, subsampling_w: int = 0, subsampling_h: int = 0) -> Format:
     register_format = partial(core.query_video_format if VSApiVer4 else core.register_format)
     return register_format(color_family, sample_type, bits_per_sample, subsampling_w, subsampling_h)
 
