@@ -19,15 +19,14 @@ src = vs.get_output(index = 1)
 # Load the ripped file.
 rip = core.lsmas.LWLibavSource(videoFile)
 
-if rip.format.subsampling_h == 1 and rip.format.subsampling_w == 1:
-    format = vs.YUV420P8
-elif rip.format.subsampling_h == 0 and rip.format.subsampling_w == 0:
-    format = vs.YUV444P8
-else:
-    assert False, "Only Support YUV420 and YUV444 format!"
+assert rip.format.color_family in [vs.YUV, vs.GRAY], "only support YUV or Gray input"
 
-if not (src.format.bits_per_sample == 8): src = src.resize.Spline64(format=format, dither_type='none')
-if not (rip.format.bits_per_sample == 8): rip = rip.resize.Spline64(format=format, dither_type='none')
+def force8bit(clip):
+    if clip.format.bits_per_sample == 8:
+        return clip
+    return clip.resize.Spline64(format=clip.format.replace(bits_per_sample=8).id, dither_type='none')
+src = force8bit(src)
+rip = force8bit(rip)
 
 # Get the clips in same dimention.
 if src.width != rip.width or src.height != rip.height:
