@@ -29,8 +29,8 @@ src = force8bit(src)
 rip = force8bit(rip)
 
 # Get the clips in same dimention.
-if src.width != rip.width or src.height != rip.height:
-    src = src.resize.Bicubic(rip.width, rip.height)
+if src.width != rip.width or src.height != rip.height or src.format.name != rip.format.name:
+    src = src.resize.Bicubic(rip.width, rip.height, format=rip.format)
 
 src_planes = [ src.std.ShufflePlanes(i, vs.GRAY) for i in range(src.format.num_planes) ]
 rip_planes = [ rip.std.ShufflePlanes(i, vs.GRAY) for i in range(rip.format.num_planes) ]
