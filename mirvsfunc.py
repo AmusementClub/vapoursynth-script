@@ -432,6 +432,8 @@ def BM3D(clip: vs.VideoNode, ref: Optional[vs.VideoNode] = None, sigma: Union[in
 
     if sColorFamily == vs.YUV and not opp:
         if sigma[1] == sigma[2] == 0:
+            if flt.format.bits_per_sample != sbitPS:
+                flt = flt.fmtc.bitdepth(bits=sbitPS, dmode=1)
             flt = core.std.ShufflePlanes([flt, clip], [0,1,2], vs.YUV)
         else:
             flt = ToYUV(flt)
